@@ -1,0 +1,379 @@
+{% extends 'track_manage/base.html' %}
+{% load manage_tags %}
+{% load static %}
+{% load i18n %}
+
+{% block content %}
+
+
+  <!-- Content Wrapper. Contains page content -->
+  <div class="content-wrapper">
+    <!-- Content Header (Page header) -->
+    <div class="content-header">
+      <div class="container-fluid">
+        <div class="row mb-2">
+          <div class="col-sm-6">
+            <h1 class="m-0">{% trans  "Вагоны" %}</h1>
+          </div><!-- /.col -->
+          <div class="col-sm-6">
+            <ol class="breadcrumb float-sm-right">
+                {% if user.is_superuser %}
+                    <li class="breadcrumb-item active"><a href="{% url 'upload' %}"><i class="fas fa-plus-circle"></i>  {% trans  "Изменить данные" %}</a></li>
+                {% endif %}
+              <li class="breadcrumb-item active"><a href="{% url 'home' %}?is_more_info=True"><i class="fas fa-info"></i>  {% trans  "Вся информация" %}</a></li>
+              <li class="breadcrumb-item active"><a href="{% url 'home' %}"><i class="fas fa-retweet"></i>  {% trans  "Сброс" %}</a></li>
+            </ol>
+          </div><!-- /.col -->
+        </div><!-- /.row -->
+      </div><!-- /.container-fluid -->
+    </div>
+    <!-- /.content-header -->
+
+    <!-- Main content -->
+    <section class="content">
+      <div class="container-fluid">
+        <!-- Small boxes (Stat box) -->
+        <div class="row">
+          <div class="col-lg-3 col-6">
+            <!-- small box -->
+            <div class="small-box bg-info">
+              <div class="inner">
+                <h3>{% wagon_count %}</h3>
+                <p>{% trans  "Количество вагонов" %}</p>
+              </div>
+              <div class="icon">
+                <i class="fa fa-train"></i>
+              </div>
+              <a href="{% url 'home' %}?all=all" class="small-box-footer">{% trans  "Подробнее" %} <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+          </div>
+          <!-- ./col -->
+          <!-- ./col -->
+          <div class="col-lg-3 col-6">
+            <!-- small box -->
+            <div class="small-box bg-warning">
+              <div class="inner">
+                <h3>{% dr_time_count %}</h3>
+                <p>{% trans  "Нужен осмотр" %}</p>
+              </div>
+              <div class="icon">
+                <i class="fa fa-search"></i>
+              </div>
+              <a href="{% url 'home' %}?review=review" class="small-box-footer">{% trans  "Подробнее" %} <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+          </div>
+          <!-- ./col -->
+          <div class="col-lg-3 col-6">
+            <!-- small box -->
+            <div class="small-box bg-orange">
+              <div class="inner">
+                <h3>{% kr2_time_count %}</h3>
+                <p>{% trans  "Нужна замена деталей" %}</p>
+              </div>
+              <div class="icon">
+                <i class="fa fa-recycle"></i>
+              </div>
+              <a href="{% url 'home' %}?change=change" class="small-box-footer">{% trans  "Подробнее" %} <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+          </div>
+          <!-- ./col -->
+        <div class="col-lg-3 col-6">
+            <!-- small box -->
+            <div class="small-box bg-danger">
+              <div class="inner">
+                <h3>{% kvr_time_count %}</h3>
+                <p>{% trans  "Нужен срочный ремонт" %}</p>
+              </div>
+              <div class="icon">
+                <i class="fa fa-hammer"></i>
+              </div>
+              <a href="{% url 'home' %}?repair=repair" class="small-box-footer">{% trans  "Подробнее" %} <i class="fas fa-arrow-circle-right"></i></a>
+            </div>
+          </div>
+        </div>
+        <!-- /.row -->
+        <!-- Main row -->
+{#      {% if empty_table %}#}
+
+      {% if tracks %}
+         {% min_id as first_id %}
+        <div class="row">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title">
+                    <a>
+                    </a>
+                </h3>
+              </div>
+              <!-- /.card-header -->
+              <div class="card-body">
+                <table id="example1" class="table table-bordered table-hover">
+                {% if request.session.is_more_info %}
+                  <thead>
+                    <tr>
+                        <th>№</th>
+                        <th>{% trans "Номер вагона" %}</th>
+                        <th>{% trans "Предпр. приписки"%}</th>
+                        <th>{% trans "Тип вагона"%}</th>
+                        <th>{% trans "Год постройки"%}</th>
+                        <th>{% trans "Завод постройки"%}</th>
+                        <th>{% trans "Состояние использование"%}</th>
+                        <th>{% trans "Дата ТО-З"%}</th>
+                        <th>{% trans "Посл. ДР"%}</th>
+                        <th>{% trans "Посл. КР-1"%}</th>
+                        <th>{% trans "Посл. КР-2"%}</th>
+                        <th>{% trans "Посл. КВР"%}</th>
+                        <th>{% trans "Назначенный срок службы"%}</th>
+                        <th>{% trans "Срок службы"%}</th>
+                        <th>{% trans "Плановая дата списания"%}</th>
+                        <th>{% trans "Модель вагона"%}</th>
+                        <th>{% trans "Тара вагона"%}</th>
+                        <th>{% trans "Вид окраски кузова"%}</th>
+                        <th>{% trans "Кол. спальных мест"%}</th>
+                        <th>{% trans "Кол. мест для сидения"%} </th>
+                        <th>{% trans "Система вент. и конд."%}</th>
+                        <th>{% trans "Тип генератора"%}</th>
+                        <th>{% trans "Констр. привод. генер."%}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+
+                  {% for track  in tracks|default_if_none:_("Нет данных") %}
+                      <tr>
+                        <td>
+                            {{ track.id|add:first_id }}
+                        </td>
+                        <td>
+                            {{ track.number }}
+                        </td>
+                        <td>
+                            {{ track.home_enterprise | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.wagon_type | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.construction_year | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.building_plant | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.state_of_use | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.date_to_z | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.last_dr | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.last_kr_1 | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.last_kr_2 | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.last_kvr | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.assigned_service_life | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.service_life | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.planned_write_of_date | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.wagon_model | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.wagon_tare | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.body_color | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.sleeping_place_count | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.sitting_place_count | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.far_and_air_condition_system | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.generator_type | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.generator_drive_design | default_if_none:_("Нет данных")}}
+                        </td>
+                      </tr>
+                  {% endfor %}
+                  </tbody>
+                  <tfoot>
+                    <tr>
+                        <th>№</th>
+                        <th>{% trans "Номер вагона" %}</th>
+                        <th>{% trans "Предпр. приписки"%}</th>
+                        <th>{% trans "Тип вагона"%}</th>
+                        <th>{% trans "Год постройки"%}</th>
+                        <th>{% trans "Завод постройки"%}</th>
+                        <th>{% trans "Состояние использование"%}</th>
+                        <th>{% trans "Дата ТО-З"%}</th>
+                        <th>{% trans "Посл. ДР"%}</th>
+                        <th>{% trans "Посл. КР-1"%}</th>
+                        <th>{% trans "Посл. КР-2"%}</th>
+                        <th>{% trans "Посл. КВР"%}</th>
+                        <th>{% trans "Назначенный срок службы"%}</th>
+                        <th>{% trans "Срок службы"%}</th>
+                        <th>{% trans "Плановая дата списания"%}</th>
+                        <th>{% trans "Модель вагона"%}</th>
+                        <th>{% trans "Тара вагона"%}</th>
+                        <th>{% trans "Вид окраски кузова"%}</th>
+                        <th>{% trans "Кол. спальных мест"%}</th>
+                        <th>{% trans "Кол. мест для сидения"%} </th>
+                        <th>{% trans "Система вент. и конд."%}</th>
+                        <th>{% trans "Тип генератора"%}</th>
+                        <th>{% trans "Констр. привод. генер."%}</th>
+                    </tr>
+                  </tfoot>
+                {% else %}
+                  <thead>
+                  <tr>
+                    <th>№</th>
+                    <th>{% trans "Номер вагона" %}</th>
+                    <th>{% trans "Тип вагона" %}</th>
+                    <th>{% trans "Модель вагона" %}</th>
+                    <th>{% trans "Состояние вагона" %}</th>
+                    <th>{% trans "Посл. ДР" %}</th>
+                    <th>{% trans "Посл. КР-1" %}</th>
+                    <th>{% trans "Посл. КР-2" %}</th>
+                    <th>{% trans "Посл. КВР" %}</th>
+                  </tr>
+                  </thead>
+                  <tbody>
+                  {% for track  in tracks  %}
+                      <tr>
+                        <td>
+                            {{ track.id|add:first_id }}
+                        </td>
+                        <td>
+                            {{ track.number }}
+                        </td>
+                        <td>
+                            {{ track.wagon_type | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.wagon_model | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.state_of_use | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.last_dr | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.last_kr_1 | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.last_kr_2 | default_if_none:_("Нет данных")}}
+                        </td>
+                        <td>
+                            {{ track.last_kvr | default_if_none:_("Нет данных")}}
+                        </td>
+                      </tr>
+                  {% endfor %}
+                  </tbody>
+                  <tfoot>
+                  <tr>
+                    <th>№</th>
+                    <th>{% trans "Номер вагона" %}</th>
+                    <th>{% trans "Тип вагона" %}</th>
+                    <th>{% trans "Модель вагона" %}</th>
+                    <th>{% trans "Состояние вагона" %}</th>
+                    <th>{% trans "Посл. ДР" %}</th>
+                    <th>{% trans "Посл. КР-1" %}</th>
+                    <th>{% trans "Посл. КР-2" %}</th>
+                    <th>{% trans "Посл. КВР" %}</th>
+                  </tr>
+                  </tfoot>
+                {% endif %}
+
+                </table>
+               <div class="row">
+          <div class="col-12">
+            <div class="card">
+              <div class="card-body">
+                <ul class="pagination pagination-month justify-content-center">
+                  {% if page_obj.number >= 4 %}
+                      <li class="page-item">
+                        <a class="page-link" href="?{% for name,value in val_dict.items %}{% if value %}{{ name }}={{ value }}&{% endif %}{% endfor %}page=1">
+                            1
+                        </a>
+                      </li>
+                      <li class="page-item">
+                        <a class="page-link">
+                            ...
+                        </a>
+                      </li>
+                  {% endif %}
+
+                    {% if page_obj.has_other_pages %}
+                        {% for page in page_obj.paginator.page_range %}
+                            {% if page_obj.number == page %}
+                                <li class="page-item active">
+                                  <a class="page-link" href="?{% for name,value in val_dict.items %}{% if value %}{{ name }}={{ value }}&{% endif %}{% endfor %}page={{ page }}">
+                                      {{ page }}
+                                  </a>
+                                </li>
+                            {% elif page >= page_obj.number|add:-2 and page <= page_obj.number|add:2 %}
+                                <li class="page-item">
+                                  <a class="page-link" href="?{% for name,value in val_dict.items %}{% if value %}{{ name }}={{ value }}&{% endif %}{% endfor %}page={{ page }}">
+                                      {{ page }}
+                                  </a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                    {% endif %}
+
+                    {% if page_obj.number <= page_obj.paginator.num_pages|add:-3 %}
+                        <li class="page-item">
+                            <a class="page-link">
+                            ...
+                        </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?{% for name,value in val_dict.items %}{% if value %}{{ name }}={{ value }}&{% endif %}{% endfor %}page={{ page_obj.paginator.num_pages }}">
+                                {{ page_obj.paginator.num_pages }}
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+              </div>
+              <!-- /.card-body -->
+            </div>
+            <!-- /.card -->
+            <!-- /.card -->
+          </div>
+          <!-- /.col -->
+        </div>
+      {% endif %}
+
+{#      {% endif %}#}
+        <!-- /.row (main row) -->
+      </div><!-- /.container-fluid -->
+    </section>
+    <!-- /.content -->
+  </div>
+
+  <!-- /.content-wrapper -->
+
+
+{% endblock %}

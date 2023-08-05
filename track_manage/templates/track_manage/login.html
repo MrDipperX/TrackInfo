@@ -1,0 +1,64 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ title }}</title>
+
+  <!-- Google Font: Source Sans Pro -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="{% static 'track_manage/plugins/fontawesome-free/css/all.min.css' %}">
+  <!-- icheck bootstrap -->
+  <link rel="stylesheet" href="{% static 'track_manage/plugins/icheck-bootstrap/icheck-bootstrap.min.css' %}">
+  <!-- Theme style -->
+  <link rel="stylesheet" href="{%static 'track_manage/css/adminlte.min.css' %}">
+</head>
+<body class="hold-transition login-page">
+<div class="login-box">
+  <!-- /.login-logo -->
+  <div class="card card-outline card-primary">
+    <div class="card-header text-center">
+      <img src="{% static 'track_manage/images/logo.png' %}" alt="O'TY AO"  height="80">
+    </div>
+    <div class="card-body">
+      <p class="login-box-msg">Вход в систему</p>
+
+      <form method="post">
+          {% csrf_token %}
+          {% for field in form %}
+            <div class="input-group mb-3">
+            {{ field }}
+                <div class="input-group-append">
+                    <div class="input-group-text">
+                        {% if field.name == 'username' %}
+                            <span class="fas fa-user"></span>
+                        {% elif field.name == 'password'%}
+                            <span class="fas fa-lock"></span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+          {% endfor %}
+            <div class="col-4 center">
+                <button type="submit" class="btn btn-primary btn-block">Вход</button>
+            </div>
+      </form>
+      <!-- /.social-auth-links -->
+
+    </div>
+    <!-- /.card-body -->
+  </div>
+  <!-- /.card -->
+</div>
+<!-- /.login-box -->
+
+<!-- jQuery -->
+<script src="{% static 'track_manage/plugins/jquery/jquery.min.js' %}"></script>
+<!-- Bootstrap 4 -->
+<script src="{% static 'track_manage/plugins/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+<!-- AdminLTE App -->
+<script src="{% static 'track_manage/js/adminlte.min.js' %}"></script>
+</body>
+</html>
