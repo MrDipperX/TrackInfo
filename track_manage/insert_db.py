@@ -1,15 +1,64 @@
 import pandas as pd
+import numpy as np
 
 from sqlalchemy import create_engine
 import sqlalchemy as db
+from environs import Env
 
+# Environment variables
+env = Env()
+env.read_env()
+
+
+DATE_COLS = [
+    'date_to_z', 'last_dr', 'last_kr_1', 'last_kr_2',
+    'last_kvr', 'planned_write_of_date'
+]
+
+INT_COLS = [
+    'construction_year', 'assigned_service_life',
+    'service_life', 'sleeping_place_count', 'sitting_place_count'
+]
+
+FLOAT_COLS = ['wagon_tare']
+
+def normalize_df(df: pd.DataFrame) -> pd.DataFrame:
+    # Стрип строк
+    df_obj = df.select_dtypes(include=['object'])
+    df[df_obj.columns] = df_obj.apply(lambda s: s.astype(str).str.strip())
+
+    # Псевдо-пустые значения -> NaN
+    EMPTY_MARKERS = {"", "—", "-", "NULL", "None", "nan", "NaT"}
+    for col in df.columns:
+        df[col] = df[col].apply(lambda x: None if (pd.isna(x) or str(x).strip() in EMPTY_MARKERS) else x)
+
+    # Даты: DD.MM.YYYY -> date
+    for col in DATE_COLS:
+        if col in df.columns:
+            df[col] = pd.to_datetime(df[col], dayfirst=True, errors='coerce').dt.date
+
+    # Целые
+    for col in INT_COLS:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce').astype('Int64')
+            # Чтобы в БД ушли настоящие NULL, заменим <NA> на None
+            df[col] = df[col].where(df[col].notna(), None)
+
+    # Float
+    for col in FLOAT_COLS:
+        if col in df.columns:
+            df[col] = pd.to_numeric(df[col], errors='coerce')
+            df[col] = df[col].where(df[col].notna(), None)
+
+    return df
 
 def pstgr_engine():
-    user = "postgres"
-    password = "Naruhina"
-    host = "localhost"
-    dbname = "TrackInfo"
-    port = "5432"
+
+    user = env.str('PSTG_USER')
+    password = env.str('PASSWORD')
+    host = env.str('HOST')
+    dbname = env.str('DBNAME')
+    port = env.str('PORT')
 
     engine = None
     try:
@@ -26,54 +75,50 @@ def from_xlsx_to_df(xlsx_file):
     read_file = pd.read_excel(xlsx_file)
 
     headers = read_file.iloc[4:, 1:].head(1).squeeze().to_list()
-    headers = [header.strip() for header in headers]
-
+    headers = [str(header).strip() for header in headers]
     content = read_file.iloc[5:, 1:]
-
-    main_df = pd.DataFrame(content.values, columns=headers)
+    df = pd.DataFrame(content.values, columns=headers)
 
     new_headers = ['number', 'home_enterprise', 'wagon_type', 'construction_year', 'building_plant',
                    'state_of_use', 'date_to_z', 'last_dr', 'last_kr_1', 'last_kr_2', 'last_kvr',
                    'assigned_service_life', 'service_life', 'planned_write_of_date', 'wagon_model', 'wagon_tare',
                    'body_color', 'sleeping_place_count', 'sitting_place_count', 'far_and_air_condition_system',
                    'generator_type', 'generator_drive_design']
-
     rename_dict = {old: new for new, old in zip(new_headers, headers)}
+    df = df.rename(columns=rename_dict)
 
-    main_df = main_df.rename(columns=rename_dict)
-
-    df_obj = main_df.select_dtypes(['object'])
-
-    main_df[df_obj.columns] = df_obj.apply(lambda x: x.str.strip())
-
-    return main_df
+    # Нормализация типов и дат
+    df = normalize_df(df)
+    return df
 
 
-def create_upsert_method(meta: db.MetaData, on_conflict_column):
+def create_upsert_method(on_conflict_column: str, schema: str = "public"):
     def method(table, conn, keys, data_iter):
-        sql_table = db.Table(table.name, meta, autoload=True)
+        # table: pandas-given TableClause (имеет .name)
+        # conn:  SQLAlchemy Connection
+        meta = db.MetaData()  # НЕ передаём engine сюда
+        # Рефлектим реальную таблицу из БД
+        sql_table = db.Table(table.name, meta, schema=schema, autoload_with=conn)
 
-        values_to_insert = [dict(zip(keys, data)) for data in data_iter]
+        values_to_insert = [dict(zip(keys, row)) for row in data_iter]
 
-        insert_stmt = db.dialects.postgresql.insert(sql_table, values_to_insert)
-
-        update_stmt = {exc_k.key: exc_k for exc_k in insert_stmt.excluded}
+        insert_stmt = db.dialects.postgresql.insert(sql_table)
+        # excluded.<col> для апдейта
+        update_stmt = {col.name: getattr(insert_stmt.excluded, col.name) for col in sql_table.columns}
 
         upsert_stmt = insert_stmt.on_conflict_do_update(
-            index_elements=[on_conflict_column],  # index elements are primary keys of a table
-            set_=update_stmt  # the SET part of an INSERT statement
+            index_elements=[getattr(sql_table.c, on_conflict_column)],  # ВАЖНО: колонку, а не строку-имя
+            set_=update_stmt
         )
 
-        conn.execute(upsert_stmt)
-
+        # executemany
+        conn.execute(upsert_stmt, values_to_insert)
     return method
 
 
 def upsert(table_name, df, db_engine):
     try:
-        meta = db.MetaData(db_engine)
-        table_name = table_name
-        upsert_method = create_upsert_method(meta, "number")
+        upsert_method = create_upsert_method(on_conflict_column="number", schema="public")
 
         df.to_sql(
             table_name,
@@ -85,10 +130,8 @@ def upsert(table_name, df, db_engine):
             chunksize=200
         )
         return "Upsert was Done"
-
     except Exception as e:
-        return "Fail" + str(e)
-
+        print(e)
 
 
 # def execute_values(xlsx_file: str) -> bool:

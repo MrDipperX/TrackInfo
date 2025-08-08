@@ -2,6 +2,9 @@
 # dotenv
 .env
 
+# xlsx files
+*.xlsx
+
 # virtualenv
 .venv
 venv/
